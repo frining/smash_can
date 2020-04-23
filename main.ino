@@ -4,17 +4,27 @@
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
-#ifndef APSSID
-#define APSSID "SmashCan"
-#define APPSK  "freedom50"
-#endif
+
 #include "index.h" 
 int counter = 0;
-#define TRIGGER 2
-#define ECHO    0
+#define HUMAN_TRIGGER D1
+#define HUMAN_ECHO    D3
 
-const char* ssid = "SmashCan";
-const char* password = "";
+#define LEVEL_TRIGGER D4
+#define LEVEL_ECHO    D7
+
+#define IN1 D2
+#define IN2 D5
+#define IN3 D6
+#define IN4 D8
+
+#define MAXV 946
+#define MINV 791
+
+#define PWM 250
+
+const char* ssid = "ASUS";
+const char* password = "freedom50";
 
 ESP8266WebServer server(80); 
 
@@ -25,37 +35,52 @@ void handleRoot() {
 
 void handleADC() {
  long duration, distance;
-  digitalWrite(TRIGGER, LOW);  
+  digitalWrite(HUMAN_TRIGGER, LOW);  
   delayMicroseconds(2); 
   
-  digitalWrite(TRIGGER, HIGH);
+  digitalWrite(HUMAN_TRIGGER, HIGH);
   delayMicroseconds(10); 
   
-  digitalWrite(TRIGGER, LOW);
-  duration = pulseIn(ECHO, HIGH);
+  digitalWrite(HUMAN_TRIGGER, LOW);
+  duration = pulseIn(HUMAN_ECHO, HIGH);
   distance = (duration/2) / 29.1;
-  
- counter++;
- String adcValue ="Santimiter ";
- String value = String(distance);
- adcValue += String(counter);
- adcValue +=": ";
- adcValue += value;
+  delay(20);
+ String adcValue = String(distance);
+ Serial.println(adcValue);
  server.send(200, "text/plane", adcValue); 
+}
+
+
+void levelValue() {
+ long duration, distance;
+  digitalWrite(LEVEL_TRIGGER, LOW);  
+  delayMicroseconds(2); 
+  
+  digitalWrite(LEVEL_TRIGGER, HIGH);
+  delayMicroseconds(10); 
+  
+  digitalWrite(LEVEL_TRIGGER, LOW);
+  duration = pulseIn(LEVEL_ECHO, HIGH);
+  distance = (duration/2) / 29.1;
+  delay(20);
+ String Level = String(distance);
+ server.send(200, "text/plane", Level); 
+}
+
+void battery() {
+ int bat = analogRead(A0);
+ bat = map(bat, MINV, MAXV,0, 100); 
+ if(bat>100){bat = 100;}
+  
+ String batValue = String(bat);
+ server.send(200, "text/plane", batValue); 
 }
 
 void setup(void){
   Serial.begin(115200);
   
- WiFi.softAP(ssid, password);
-
-  IPAddress myIP = WiFi.softAPIP();
-  Serial.print("AP IP address: ");
-  Serial.println(myIP);
-
-  pinMode(TRIGGER, OUTPUT);
-  pinMode(ECHO, INPUT);
-  
+ WiFi.begin(ssid, password);
+ 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -70,6 +95,8 @@ void setup(void){
  
   server.on("/", handleRoot);     
   server.on("/readADC", handleADC);
+  server.on("/batLevel", battery);
+  server.on("/rubLevel", levelValue);
 
   server.begin();     
   Serial.println("HTTP server started");
@@ -108,6 +135,19 @@ void setup(void){
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+
+
+  
+  pinMode(HUMAN_TRIGGER, OUTPUT);
+  pinMode(HUMAN_ECHO, INPUT);
+  
+  pinMode(LEVEL_TRIGGER, OUTPUT);
+  pinMode(LEVEL_ECHO, INPUT);
+
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
 }
 
 void loop(void){

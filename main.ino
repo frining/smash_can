@@ -4,7 +4,6 @@
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
-
 #include "index.h" 
 int counter = 0;
 #define HUMAN_TRIGGER D1
@@ -21,7 +20,10 @@ int counter = 0;
 #define MAXV 946
 #define MINV 791
 
-#define PWM 250
+bool human = false;
+bool opened = false;
+bool unpressed = false;
+
 
 const char* ssid = "ASUS";
 const char* password = "freedom50";
@@ -45,11 +47,47 @@ void handleADC() {
   duration = pulseIn(HUMAN_ECHO, HIGH);
   distance = (duration/2) / 29.1;
   delay(20);
+  
  String adcValue = String(distance);
  Serial.println(adcValue);
  server.send(200, "text/plane", adcValue); 
 }
+void(* resetFunc) (void) = 0;
 
+void doorCtr()
+{
+  
+ long duration, distance;
+  digitalWrite(HUMAN_TRIGGER, LOW);  
+  delayMicroseconds(2); 
+  
+  digitalWrite(HUMAN_TRIGGER, HIGH);
+  delayMicroseconds(10); 
+  
+  digitalWrite(HUMAN_TRIGGER, LOW);
+  duration = pulseIn(HUMAN_ECHO, HIGH);
+  distance = (duration/2) / 29.1;
+  delay(20);
+  if(distance < 60 && opened == false)
+  {
+    digitalWrite(IN1, HIGH);
+    digitalWrite(IN2, LOW);
+    delay(6000);
+    digitalWrite(IN1, LOW);
+    opened = true;
+  }
+  if(distance > 60 && opened == true)
+  {
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, HIGH);
+    delay(6000);
+    digitalWrite(IN2, LOW);
+    opened = false;
+    unpressed = true;
+    //Replace to press function
+    resetFunc();
+  }
+}
 
 void levelValue() {
  long duration, distance;
@@ -148,9 +186,15 @@ void setup(void){
   pinMode(IN2, OUTPUT);
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+
 }
 
 void loop(void){
+  doorCtr();    
   ArduinoOTA.handle();
-  server.handleClient();        
+  server.handleClient();    
 }

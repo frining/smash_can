@@ -175,7 +175,7 @@ void setup(void){
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
 
-
+  pinMode(BUTTON, INPUT);
   
   pinMode(HUMAN_TRIGGER, OUTPUT);
   pinMode(HUMAN_ECHO, INPUT);

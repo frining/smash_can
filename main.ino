@@ -17,6 +17,7 @@ int counter = 0;
 #define IN3 D6
 #define IN4 D8
 
+#define BUTTON D0
 #define MAXV 946
 #define MINV 791
 
